@@ -2,10 +2,10 @@
   "domain": "deepseek_integration",
   "name": "DeepSeek Integration",
   "version": "1.0.0",
-  "documentation": "https://github.com/yourusername/hacs-deepseek-integration",
+  "documentation": "https://github.com/boluohome/hacs-deepseek-integration",
   "requirements": ["aiohttp"],
   "dependencies": ["conversation", "xiaomi_miot"],
-  "codeowners": ["@yourusername"],
+  "codeowners": ["@boluohome"],
   "config_flow": true,
   "iot_class": "cloud_push"
 }
