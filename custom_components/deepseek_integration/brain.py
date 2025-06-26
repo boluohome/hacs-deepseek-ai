@@ -89,7 +89,7 @@ class DeepSeekBrain(DefaultAgent):
     async def async_handle_command(self, call):
         """处理用户命令服务调用"""
         command = call.data.get("command", "")
-        await self.async_process_command(command)
+        return await self.async_process_command(command)
     
     async def async_process_command(self, command: str):
         """处理用户命令"""
@@ -102,18 +102,22 @@ class DeepSeekBrain(DefaultAgent):
         learned_action = self._check_learned_behavior(command, context)
         if learned_action:
             _LOGGER.info(f"使用学习过的行为: {learned_action}")
-            await self.async_execute_action(learned_action)
-            return
+            success = await self.async_execute_action(learned_action)
+            return {"response": "操作已完成" if success else "操作失败"}
         
         # 解析命令
         parsed_command = await self.async_parse_command(command, context)
         
         # 执行动作
         success = await self.async_execute_action(parsed_command["action"])
+        response = parsed_command.get("response", "操作已完成")
         
         # 如果执行成功，学习这个行为
         if success:
             self._learn_behavior(command, context, parsed_command)
+            return {"response": response}
+        else:
+            return {"response": "操作失败，请重试"}
     
     async def async_get_environment_context(self):
         """获取当前环境上下文"""
@@ -329,8 +333,6 @@ class DeepSeekBrain(DefaultAgent):
         # 保存学习到的行为
         self.learned_habits[key] = parsed_command["action"]
         _LOGGER.info(f"学习到新行为: {key} -> {parsed_command['action']}")
-        
-        # 保存到文件（可选）
     
     async def async_get_agent_extra(self) -> dict:
         """返回代理额外信息"""
@@ -338,8 +340,8 @@ class DeepSeekBrain(DefaultAgent):
     
     async def async_process(self, user_input: agent.ConversationInput) -> agent.ConversationResult:
         """处理对话输入"""
-        response = await self.async_process_command(user_input.text)
+        result = await self.async_process_command(user_input.text)
         return agent.ConversationResult(
-            response=response.get("response", "操作已完成"),
+            response=result.get("response", "操作已完成"),
             conversation_id=user_input.conversation_id
         )
