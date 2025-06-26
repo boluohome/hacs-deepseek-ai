@@ -1,11 +1,12 @@
 {
   "domain": "deepseek_integration",
-  "name": "DeepSeek Integration",
+  "name": "DeepSeek AI 集成",
   "version": "1.0.0",
-  "documentation": "https://github.com/boluohome/hacs-deepseek-integration",
-  "requirements": ["aiohttp"],
-  "dependencies": ["conversation", "xiaomi_miot"],
-  "codeowners": ["@boluohome"],
+  "documentation": "https://github.com/your-repo/hacs-deepseek-integration",
+  "issue_tracker": "https://github.com/your-repo/hacs-deepseek-integration/issues",
+  "codeowners": ["@yourusername"],
   "config_flow": true,
-  "iot_class": "cloud_push"
+  "iot_class": "cloud_push",
+  "requirements": ["aiohttp>=3.9.3"],
+  "dependencies": ["conversation"]
 }
