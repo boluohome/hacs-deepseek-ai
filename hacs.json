@@ -1,0 +1,7 @@
+{
+  "name": "DeepSeek Integration",
+  "render_readme": true,
+  "domains": ["deepseek_integration"],
+  "homeassistant": "2023.8.0",
+  "iot_class": "cloud_push"
+}
