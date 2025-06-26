@@ -13,6 +13,7 @@ from homeassistant.components.conversation.default_agent import DefaultAgent
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.config_entries import ConfigEntry
 
 from .const import DOMAIN, CONF_DEEPSEEK_API_KEY, CONF_AUTO_DISCOVER_INTERVAL, DEFAULT_AUTO_DISCOVER_INTERVAL
 from .brain import DeepSeekBrain
@@ -23,6 +24,7 @@ CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """设置集成组件"""
+    # 如果已经在配置中设置，直接返回
     if DOMAIN in config:
         conf = config[DOMAIN]
         api_key = conf.get(CONF_DEEPSEEK_API_KEY)
@@ -57,7 +59,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     
     return True
 
-async def async_setup_entry(hass: HomeAssistant, config_entry):
+async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry):
     """通过配置项设置集成"""
     config = config_entry.data
     api_key = config[CONF_DEEPSEEK_API_KEY]
@@ -81,8 +83,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
     async_track_time_interval(
         hass,
         deepseek_brain.async_auto_discover,
-        timedelta(seconds=auto_discover_interval)
-    )
+        timedelta(seconds=auto_discover_interval))
     
     # 覆盖默认的对话代理
     agent.async_set_agent(hass, deepseek_brain)
@@ -90,7 +91,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry):
     _LOGGER.info("DeepSeek集成通过配置项初始化完成")
     return True
 
-async def async_unload_entry(hass: HomeAssistant, config_entry):
+async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry):
     """卸载集成"""
     if DOMAIN in hass.data:
         del hass.data[DOMAIN]
