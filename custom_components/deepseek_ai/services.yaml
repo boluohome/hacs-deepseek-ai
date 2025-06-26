@@ -1,10 +1,22 @@
+process_text:
+  name: 处理文本
+  description: 使用 DeepSeek AI 处理文本
+  fields:
+    text:
+      name: 文本
+      description: 要处理的文本内容
+      example: "今天天气怎么样？"
+      required: true
+      selector:
+        text:
+
 execute_command:
   name: 执行命令
-  description: 通过 DeepSeek AI 执行智能家居命令
+  description: 执行智能家居命令
   fields:
     command:
       name: 命令
-      description: 要执行的命令文本
+      description: 要执行的命令
       example: "打开客厅的灯"
       required: true
       selector:
