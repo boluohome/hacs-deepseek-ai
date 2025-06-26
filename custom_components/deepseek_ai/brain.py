@@ -1,83 +1,101 @@
 """DeepSeek AI 智能中枢"""
 import logging
 import aiohttp
+import asyncio
+from datetime import timedelta
 
 from homeassistant.core import HomeAssistant
-from homeassistant.components.conversation.default_agent import DefaultAgent
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.event import async_track_time_interval
 
-from .const import DOMAIN, CONF_API_KEY, API_ENDPOINT
+from .const import (
+    DOMAIN,
+    TEXT_COMPLETION_URL,
+    HARDWARE_OPTIMIZATION,
+    DEFAULT_TIMEOUT,
+    DEFAULT_MAX_TOKENS
+)
 
 _LOGGER = logging.getLogger(__name__)
 
-class DeepSeekBrain(DefaultAgent):
+class DeepSeekBrain:
     """DeepSeek AI 智能中枢"""
     
-    def __init__(self, hass: HomeAssistant, api_key: str):
-        super().__init__(hass)
+    def __init__(self, hass: HomeAssistant, config: dict):
         self.hass = hass
-        self.api_key = api_key
+        self.config = config
         self.session = async_get_clientsession(hass)
-        self.discovery_listener = None
+        self._health_check = None
+        
+        # 硬件优化参数
+        self.concurrent_requests = HARDWARE_OPTIMIZATION["concurrent_requests"]
+        self.max_retries = HARDWARE_OPTIMIZATION["max_retries"]
+        self.backoff_factor = HARDWARE_OPTIMIZATION["backoff_factor"]
+        
+        # 请求信号量（限制并发请求）
+        self.semaphore = asyncio.Semaphore(self.concurrent_requests)
     
     async def async_setup(self):
         """初始化设置"""
+        # 设置健康检查
+        self._health_check = async_track_time_interval(
+            self.hass,
+            self._perform_health_check,
+            timedelta(minutes=30)
+        
         _LOGGER.info("DeepSeek AI 智能中枢初始化完成")
     
-    async def async_handle_command(self, call):
-        """处理用户命令服务调用"""
-        command = call.data.get("command", "")
-        _LOGGER.info(f"收到命令: {command}")
-        
+    async def _perform_health_check(self, now=None):
+        """执行健康检查"""
         try:
-            # 调用 DeepSeek API
-            response = await self._call_deepseek_api(command)
-            return {"response": response}
+            response = await self.async_send_text("健康检查")
+            if "健康" not in response:
+                raise Exception("健康检查失败")
+            _LOGGER.debug("健康检查成功")
         except Exception as e:
-            _LOGGER.error(f"处理命令时出错: {e}")
-            return {"response": "处理命令时出错，请检查日志"}
+            _LOGGER.error("健康检查失败: %s", e)
     
-    async def _call_deepseek_api(self, command: str):
-        """调用 DeepSeek API"""
+    async def async_send_text(self, text: str) -> str:
+        """发送文本请求（带重试机制）"""
         headers = {
-            "Authorization": f"Bearer {self.api_key}",
+            "Authorization": f"Bearer {self.config[CONF_API_KEY]}",
             "Content-Type": "application/json"
         }
         
         payload = {
-            "model": "deepseek-chat",
-            "messages": [{"role": "user", "content": command}]
+            "model": self.config.get(CONF_MODEL, "deepseek-chat"),
+            "messages": [{"role": "user", "content": text}],
+            "max_tokens": self.config.get(CONF_MAX_TOKENS, DEFAULT_MAX_TOKENS)
         }
         
-        async with self.session.post(
-            API_ENDPOINT,
-            headers=headers,
-            json=payload,
-            timeout=30
-        ) as response:
-            if response.status != 200:
-                error_text = await response.text()
-                _LOGGER.error(f"API 请求失败: {response.status} - {error_text}")
-                return "API 请求失败，请检查API密钥和网络连接"
-            
-            data = await response.json()
-            return data["choices"][0]["message"]["content"]
-    
-    async def async_auto_discover(self, now=None):
-        """自动发现设备（简化）"""
-        _LOGGER.debug("执行自动设备发现...")
+        timeout = aiohttp.ClientTimeout(total=self.config.get(CONF_TIMEOUT, DEFAULT_TIMEOUT))
         
-    async def async_process(self, user_input):
-        """处理对话输入"""
-        try:
-            response = await self._call_deepseek_api(user_input.text)
-            return agent.ConversationResult(
-                response=response,
-                conversation_id=user_input.conversation_id
-            )
-        except Exception as e:
-            _LOGGER.error(f"处理对话时出错: {e}")
-            return agent.ConversationResult(
-                response="处理请求时出错",
-                conversation_id=user_input.conversation_id
-            )
+        # 带重试机制的请求
+        for attempt in range(self.max_retries + 1):
+            try:
+                async with self.semaphore:
+                    async with self.session.post(
+                        TEXT_COMPLETION_URL,
+                        headers=headers,
+                        json=payload,
+                        timeout=timeout
+                    ) as response:
+                        if response.status != 200:
+                            error_text = await response.text()
+                            raise Exception(f"API error: {response.status} - {error_text}")
+                        
+                        data = await response.json()
+                        return data["choices"][0]["message"]["content"]
+            except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+                if attempt < self.max_retries:
+                    wait_time = self.backoff_factor * (2 ** attempt)
+                    _LOGGER.warning("请求失败，将在 %.1f 秒后重试 (尝试 %d/%d)",
+                                    wait_time, attempt + 1, self.max_retries)
+                    await asyncio.sleep(wait_time)
+                else:
+                    raise Exception(f"请求失败: {str(e)}")
+    
+    async def async_cleanup(self):
+        """清理资源"""
+        if self._health_check:
+            self._health_check()
