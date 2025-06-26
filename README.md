@@ -92,4 +92,4 @@ automation:
 
 ## 支持
 
-如有问题，请在 [GitHub Issues](https://github.com/yourusername/hacs-deepseek-integration/issues) 报告
+如有问题，请在 [GitHub Issues](https://github.com/boluohome/hacs-deepseek-integration/issues) 报告
