@@ -1,0 +1,11 @@
+execute_command:
+  name: 执行命令
+  description: 通过 DeepSeek AI 执行智能家居命令
+  fields:
+    command:
+      name: 命令
+      description: 要执行的命令文本
+      example: "打开客厅的灯"
+      required: true
+      selector:
+        text:

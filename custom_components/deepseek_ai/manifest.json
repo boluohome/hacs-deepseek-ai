@@ -1,0 +1,12 @@
+{
+  "domain": "deepseek_ai",
+  "name": "DeepSeek AI",
+  "version": "1.1.0",
+  "documentation": "https://github.com/boluohome/hacs-deepseek-integration",
+  "issue_tracker": "https://github.com/boluohome/hacs-deepseek-integration/issues",
+  "codeowners": ["@boluohome"],
+  "config_flow": true,
+  "requirements": ["aiohttp>=3.9.3"],
+  "iot_class": "cloud_push",
+  "loggers": ["custom_components.deepseek_ai"]
+}
