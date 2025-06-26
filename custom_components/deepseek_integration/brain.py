@@ -10,16 +10,7 @@ from homeassistant.helpers import device_registry as dr, entity_registry as er
 from homeassistant.components.conversation.default_agent import DefaultAgent
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .const import (
-    DOMAIN, 
-    ROLE_EYES, 
-    ROLE_EARS, 
-    ROLE_MOUTH, 
-    ROLE_HANDS, 
-    ROLE_SENSORS,
-    SERVICE_EXECUTE_COMMAND
-)
-from .device_classifier import IntelligentDeviceClassifier
+from .const import DOMAIN, ROLE_EYES, ROLE_EARS, ROLE_MOUTH, ROLE_HANDS, ROLE_SENSORS
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -41,6 +32,7 @@ class DeepSeekBrain(DefaultAgent):
         self.context_history = []
         self.device_classifier = IntelligentDeviceClassifier()
         self.session = async_get_clientsession(hass)
+        self.discovery_listener = None  # 用于存储定时任务句柄
     
     async def async_setup(self):
         """初始化设置"""
@@ -50,6 +42,10 @@ class DeepSeekBrain(DefaultAgent):
     async def async_discover_and_configure(self):
         """自动发现设备并配置角色"""
         _LOGGER.info("开始自动发现设备并配置角色...")
+        
+        # 重置设备列表
+        for role in self.device_roles:
+            self.device_roles[role] = []
         
         # 获取所有设备
         device_registry = dr.async_get(self.hass)
@@ -64,7 +60,7 @@ class DeepSeekBrain(DefaultAgent):
             # 分类设备
             await self._classify_device(device_entry, device_entities)
         
-        _LOGGER.info("设备配置完成")
+        _LOGGER.info(f"设备配置完成，发现设备: {len(device_registry.devices)}")
         
     async def _classify_device(self, device_entry, entities):
         """根据设备实体分类设备角色"""
@@ -185,8 +181,7 @@ class DeepSeekBrain(DefaultAgent):
             parsed["action"] = {
                 "type": "call_service",
                 "domain": "light",
-                "service": "turn_on",
-                "target": {"entity_id": "light.living_room"}
+                "service": "turn_on"
             }
             
             # 识别具体灯光
@@ -194,24 +189,38 @@ class DeepSeekBrain(DefaultAgent):
                 parsed["action"]["target"] = {"entity_id": "light.living_room"}
             elif "卧室" in command:
                 parsed["action"]["target"] = {"entity_id": "light.bedroom"}
+            else:
+                parsed["action"]["target"] = {"entity_id": "light.living_room"}
                 
         elif "关闭" in command and "灯" in command:
             parsed["intent"] = "turn_off_light"
             parsed["action"] = {
                 "type": "call_service",
                 "domain": "light",
-                "service": "turn_off",
-                "target": {"entity_id": "light.living_room"}
+                "service": "turn_off"
             }
             
-        elif "摄像头" in command:
+            if "客厅" in command:
+                parsed["action"]["target"] = {"entity_id": "light.living_room"}
+            elif "卧室" in command:
+                parsed["action"]["target"] = {"entity_id": "light.bedroom"}
+            else:
+                parsed["action"]["target"] = {"entity_id": "light.living_room"}
+                
+        elif "摄像头" in command or "监控" in command:
             parsed["intent"] = "view_camera"
             parsed["action"] = {
                 "type": "call_service",
                 "domain": "camera",
-                "service": "snapshot",
-                "target": {"entity_id": "camera.front_door"}
+                "service": "snapshot"
             }
+            
+            if "门口" in command:
+                parsed["action"]["target"] = {"entity_id": "camera.front_door"}
+            elif "客厅" in command:
+                parsed["action"]["target"] = {"entity_id": "camera.living_room"}
+            else:
+                parsed["action"]["target"] = {"entity_id": "camera.front_door"}
         
         return parsed
     
@@ -260,9 +269,18 @@ class DeepSeekBrain(DefaultAgent):
             async with self.session.post(
                 "https://api.deepseek.com/v1/chat/completions",
                 headers=headers,
-                json=payload
+                json=payload,
+                timeout=30
             ) as response:
+                if response.status != 200:
+                    _LOGGER.error(f"API请求失败: {response.status}")
+                    return self._create_error_response()
+                
                 data = await response.json()
+                if "choices" not in data or len(data["choices"]) == 0:
+                    _LOGGER.error("API响应格式错误")
+                    return self._create_error_response()
+                
                 content = data["choices"][0]["message"]["content"]
                 
                 # 提取JSON部分
@@ -271,14 +289,22 @@ class DeepSeekBrain(DefaultAgent):
                     return json.loads(json_match.group(1))
                 else:
                     # 尝试直接解析整个响应
-                    return json.loads(content)
+                    try:
+                        return json.loads(content)
+                    except json.JSONDecodeError:
+                        _LOGGER.error("无法解析API响应")
+                        return self._create_error_response()
         except Exception as e:
             _LOGGER.error(f"调用DeepSeek API失败: {e}")
-            return {
-                "intent": "error",
-                "action": {"type": "speak", "message": "抱歉，处理命令时遇到问题"},
-                "response": "抱歉，处理命令时遇到问题"
-            }
+            return self._create_error_response()
+    
+    def _create_error_response(self):
+        """创建错误响应"""
+        return {
+            "intent": "error",
+            "action": {"type": "speak", "message": "抱歉，处理命令时遇到问题"},
+            "response": "抱歉，处理命令时遇到问题"
+        }
     
     async def async_execute_action(self, action: dict):
         """执行动作"""
