@@ -22,14 +22,13 @@ CONFIG_SCHEMA = vol.Schema({
     vol.Optional(
         CONF_AUTO_DISCOVER_INTERVAL,
         default=DEFAULT_AUTO_DISCOVER_INTERVAL
-    ): int
+    ): cv.positive_int
 })
 
 class DeepSeekConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """处理 DeepSeek 配置流"""
     
     VERSION = 1
-    CONNECTION_CLASS = config_entries.CONN_CLASS_CLOUD_PUSH
     
     async def async_step_user(self, user_input=None):
         """处理用户初始步骤"""
@@ -40,6 +39,10 @@ class DeepSeekConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if len(user_input[CONF_DEEPSEEK_API_KEY]) != 32:
                 errors[CONF_DEEPSEEK_API_KEY] = "invalid_api_key_format"
             else:
+                # 检查是否已存在配置项
+                await self.async_set_unique_id(DOMAIN)
+                self._abort_if_unique_id_configured()
+                
                 # 创建配置项
                 return self.async_create_entry(
                     title="DeepSeek Integration",
@@ -68,6 +71,13 @@ class DeepSeekOptionsFlowHandler(config_entries.OptionsFlow):
     async def async_step_init(self, user_input=None):
         """管理选项"""
         errors = {}
+        current_interval = self.config_entry.options.get(
+            CONF_AUTO_DISCOVER_INTERVAL,
+            self.config_entry.data.get(
+                CONF_AUTO_DISCOVER_INTERVAL,
+                DEFAULT_AUTO_DISCOVER_INTERVAL
+            )
+        )
         
         if user_input is not None:
             # 验证并更新配置
@@ -77,14 +87,8 @@ class DeepSeekOptionsFlowHandler(config_entries.OptionsFlow):
         options_schema = vol.Schema({
             vol.Optional(
                 CONF_AUTO_DISCOVER_INTERVAL,
-                default=self.config_entry.options.get(
-                    CONF_AUTO_DISCOVER_INTERVAL,
-                    self.config_entry.data.get(
-                        CONF_AUTO_DISCOVER_INTERVAL,
-                        DEFAULT_AUTO_DISCOVER_INTERVAL
-                    )
-                )
-            ): int
+                default=current_interval
+            ): cv.positive_int
         })
         
         return self.async_show_form(
