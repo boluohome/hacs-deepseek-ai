@@ -13,15 +13,16 @@ class IntelligentDeviceClassifier:
             return "eyes"
         
         # 麦克风/语音设备 -> 耳朵
-        if device_entry.manufacturer and "xiaomi" in device_entry.manufacturer.lower() and device_entry.model and "speaker" in device_entry.model.lower():
-            return "ears"
+        if device_entry.manufacturer and "xiaomi" in device_entry.manufacturer.lower():
+            if device_entry.model and "speaker" in device_entry.model.lower():
+                return "ears"
         
         # 音箱 -> 嘴巴
         if any(e.domain == "media_player" for e in entities):
             return "mouth"
         
         # 开关/灯光 -> 手
-        if any(e.domain in ["switch", "light", "cover"] for e in entities):
+        if any(e.domain in ["switch", "light", "cover", "fan"] for e in entities):
             return "hands"
         
         # 传感器 -> 传感器
