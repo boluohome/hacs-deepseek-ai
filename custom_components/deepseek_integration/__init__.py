@@ -23,7 +23,6 @@ CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """设置集成组件"""
-    # 如果已经在配置中设置，直接返回
     if DOMAIN in config:
         conf = config[DOMAIN]
         api_key = conf.get(CONF_DEEPSEEK_API_KEY)
