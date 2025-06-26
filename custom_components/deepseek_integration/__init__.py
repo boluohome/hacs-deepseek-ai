@@ -1,9 +1,6 @@
 """DeepSeek 智能家居集成"""
 from __future__ import annotations
 import logging
-import re
-import json
-from datetime import datetime, timedelta
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr, entity_registry as er
@@ -24,39 +21,7 @@ CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """设置集成组件"""
-    # 如果已经在配置中设置，直接返回
-    if DOMAIN in config:
-        conf = config[DOMAIN]
-        api_key = conf.get(CONF_DEEPSEEK_API_KEY)
-        auto_discover_interval = conf.get(CONF_AUTO_DISCOVER_INTERVAL, DEFAULT_AUTO_DISCOVER_INTERVAL)
-        
-        # 初始化智能中枢
-        deepseek_brain = DeepSeekBrain(hass, api_key)
-        await deepseek_brain.async_setup()
-        
-        # 存储到hass.data
-        hass.data[DOMAIN] = deepseek_brain
-        
-        # 注册服务
-        hass.services.async_register(
-            DOMAIN, 
-            "execute_command", 
-            deepseek_brain.async_handle_command
-        )
-        
-        # 注册定时任务
-        async_track_time_interval(
-            hass,
-            deepseek_brain.async_auto_discover,
-            timedelta(seconds=auto_discover_interval)
-        )
-        
-        # 覆盖默认的对话代理
-        agent.async_set_agent(hass, deepseek_brain)
-        
-        _LOGGER.info("DeepSeek集成初始化完成")
-        return True
-    
+    # 2024.12.0 核心版本要求只通过配置流设置
     return True
 
 async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry):
@@ -94,6 +59,11 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry):
 async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry):
     """卸载集成"""
     if DOMAIN in hass.data:
+        # 停止定时任务
+        deepseek_brain = hass.data[DOMAIN]
+        if hasattr(deepseek_brain, "discovery_listener"):
+            deepseek_brain.discovery_listener()
+        
         del hass.data[DOMAIN]
     
     # 恢复默认对话代理
