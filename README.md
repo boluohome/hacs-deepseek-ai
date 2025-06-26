@@ -1,3 +1,75 @@
+
+hacs-deepseek-integration/
+├── custom_components/
+│   └── deepseek_integration/
+│       ├── __init__.py              # 已更新
+│       ├── manifest.json
+│       ├── services.yaml
+│       ├── brain.py                 # 已更新
+│       ├── const.py
+│       ├── device_classifier.py     # 已更新
+│       └── config_flow.py           # 新增
+├── docs/
+│   └── README.md
+├── hacs.json
+└── LICENSE
+安装后测试步骤
+完全删除旧版本：
+
+bash
+# 删除旧集成文件
+rm -rf custom_components/deepseek_integration
+
+# 重启Home Assistant
+重新安装集成：
+
+通过HACS重新安装
+
+或手动复制更新后的文件
+
+配置集成：
+
+转到 设置 > 设备与服务 > 添加集成
+
+搜索 "DeepSeek Integration"
+
+输入API密钥（32字符）
+
+验证功能：
+
+yaml
+service: deepseek_integration.execute_command
+data:
+  command: "打开客厅的灯"
+常见问题解决方案
+仍然出现配置错误：
+
+检查Home Assistant日志：/config/home-assistant.log
+
+确保所有文件权限正确（644）
+
+确保文件编码为UTF-8
+
+API调用失败：
+
+验证DeepSeek API密钥有效性
+
+检查网络连接是否正常
+
+设备分类不正确：
+
+更新device_classifier.py中的分类逻辑
+
+在配置中增加自定义分类规则
+
+小爱音箱不响应：
+
+确保已安装Xiaomi MIoT集成
+
+验证小爱音箱实体ID是否正确
+
+这个修复方案添加了正确的配置流处理，解决了Invalid handler specified错误，同时优化了设备分类逻辑和错误处理。
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # DeepSeek 智能家居集成
 
 将 DeepSeek 的强大 AI 能力集成到 Home Assistant 中，实现自适应智能家居控制。
