@@ -1,0 +1,9 @@
+execute_command:
+  description: Execute a command using DeepSeek.
+  fields:
+    command:
+      description: The command to execute.
+      example: "Turn on the living room light"
+      required: true
+      selector:
+        text:
