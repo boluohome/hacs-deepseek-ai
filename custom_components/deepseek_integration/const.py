@@ -1,22 +1,14 @@
-"""常量定义"""
+"""DeepSeek 集成常量"""
 DOMAIN = "deepseek_integration"
-DEFAULT_NAME = "DeepSeek"
 
-# 配置项
-CONF_DEEPSEEK_API_KEY = "deepseek_api_key"
+# 配置键
+CONF_DEEPSEEK_API_KEY = "api_key"
 CONF_AUTO_DISCOVER_INTERVAL = "auto_discover_interval"
-CONF_LEARNING_MODE = "learning_mode"
-
-# 默认值
-DEFAULT_AUTO_DISCOVER_INTERVAL = 3600  # 1小时
-DEFAULT_LEARNING_MODE = "adaptive"
+DEFAULT_AUTO_DISCOVER_INTERVAL = 300  # 5分钟
 
 # 设备角色
-ROLE_EYES = "eyes"
-ROLE_EARS = "ears"
-ROLE_MOUTH = "mouth"
-ROLE_HANDS = "hands"
-ROLE_SENSORS = "sensors"
-
-# 服务
-SERVICE_EXECUTE_COMMAND = "execute_command"
+ROLE_EYES = "eyes"       # 摄像头/视觉设备
+ROLE_EARS = "ears"       # 麦克风/音频输入设备
+ROLE_MOUTH = "mouth"     # 扬声器/音频输出设备
+ROLE_HANDS = "hands"     # 执行器/开关设备
+ROLE_SENSORS = "sensors" # 传感器设备
