@@ -1,0 +1,36 @@
+execute_command:
+  name: 执行命令
+  description: 使用 DeepSeek AI 执行命令
+  fields:
+    command:
+      name: 命令
+      description: 要执行的命令
+      example: "打开客厅的灯"
+      required: true
+      selector:
+        text:
+
+express_concern:
+  name: 表达关心
+  description: AI表达关心或着急
+  fields:
+    reason:
+      name: 原因
+      description: 表达关心的原因
+      example: "long_time_no_detection"
+      selector:
+        select:
+          options:
+            - long_time_no_detection
+            - unusual_activity
+
+speak_message:
+  name: 语音消息
+  description: 通过语音设备播放消息
+  fields:
+    message:
+      name: 消息内容
+      description: 要播放的消息
+      required: true
+      selector:
+        text:
